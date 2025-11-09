@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIME</title>
+  <style>
+    :root {
+      --bg-color: #000;
+      --text-color: #fff;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Noto Sans KR', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100vh;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    header {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    header button {
+      background-color: #222;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    header button.active {
+      background-color: #555;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    h1 {
+      font-size: 4em; /* 조금 더 키움 */
+      margin: 0 10px 30px 10px; /* 좌우 여백 조금 추가 */
+      text-align: center;
+      cursor: pointer;
+      word-break: break-word; /* 긴 텍스트도 줄바꿈 */
+    }
+
+    .timer {
+      font-size: 10em;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    .progress-bar {
+      width: 80%;
+      height: 20px;
+      background-color: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+
+    .progress {
+      height: 100%;
+      width: 100%;
+      background-color: var(--text-color);
+      border-radius: 10px;
+      transition: width 0.5s linear, background-color 0.3s;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .buttons button {
+      background-color: #222;
+      color: #fff;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .buttons button:hover {
+      background-color: #444;
+    }
+
+    /* 설정창 & 커스터마이징창 */
+    #settingsModal, #customModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+      border-radius: 15px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    #settingsModal input, #customModal input {
+      width: 80px;
+      padding: 5px;
+      text-align: center;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #444;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    #settingsModal button, #customModal button {
+      width: 150px;
+      margin-top: 5px;
+      padding: 8px 20px;
+      background-color: #222;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="timerMode" class="active">타이머</button>
+    <button id="stopwatchMode">스톱워치</button>
+  </header>
+
+  <div class="container">
+    <h1 id="displayText">텍스트(클릭하여 내용 변경)</h1>
+    <input id="textInput" type="text" style="display:none; font-size:2em; text-align:center; background:none; color:var(--text-color); border:none; outline:none;" />
+    <div id="timerDisplay" class="timer">00:00:00</div>
+
+    <div id="progressContainer" class="progress-bar">
+      <div id="progress" class="progress"></div>
+    </div>
+
+    <div class="buttons">
+      <button id="startBtn">시작</button>
+      <button id="resetBtn">초기화</button>
+      <button id="settingsBtn">설정</button>
+    </div>
+  </div>
+
+  <!-- 설정창 -->
+  <div id="settingsModal">
+    <label>시간: <input type="number" id="setHours" min="0" max="99" value="0"></label>
+    <label>분: <input type="number" id="setMinutes" min="0" max="59" value="0"></label>
+    <label>초: <input type="number" id="setSeconds" min="0" max="59" value="0"></label>
+    <button id="themeToggle">다크모드</button>
+    <button id="customBtn">커스터마이징</button>
+    <button id="closeSettings">닫기</button>
+  </div>
+
+  <!-- 커스터마이징창 -->
+  <div id="customModal">
+    <label>배경색: <input type="color" id="bgColorPicker"></label>
+    <label>글자색: <input type="color" id="textColorPicker"></label>
+    <button id="applyCustom">적용</button>
+  </div>
+
+  <script>
+    const displayText = document.getElementById('displayText');
+    const textInput = document.getElementById('textInput');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettings = document.getElementById('closeSettings');
+    const setHours = document.getElementById('setHours');
+    const setMinutes = document.getElementById('setMinutes');
+    const setSeconds = document.getElementById('setSeconds');
+    const timerMode = document.getElementById('timerMode');
+    const stopwatchMode = document.getElementById('stopwatchMode');
+    const progressContainer = document.getElementById('progressContainer');
+    const progress = document.getElementById('progress');
+    const themeToggle = document.getElementById('themeToggle');
+    const customBtn = document.getElementById('customBtn');
+    const customModal = document.getElementById('customModal');
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const textColorPicker = document.getElementById('textColorPicker');
+    const applyCustom = document.getElementById('applyCustom');
+
+    let totalSeconds = 0;
+    let remainingSeconds = 0;
+    let timerInterval;
+    let isRunning = false;
+    let isTimerMode = true;
+    let stopwatchTime = 0;
+    let isDarkMode = true;
+
+    // 텍스트 수정
+    displayText.addEventListener('click', () => {
+      textInput.value = displayText.textContent;
+      displayText.style.display = 'none';
+      textInput.style.display = 'block';
+      textInput.focus();
+    });
+
+    textInput.addEventListener('blur', () => {
+      displayText.textContent = textInput.value || '집중 시간';
+      textInput.style.display = 'none';
+      displayText.style.display = 'block';
+    });
+
+    function updateDisplay(seconds) {
+      const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+      const secs = String(seconds % 60).padStart(2, '0');
+      timerDisplay.textContent = `${hrs}:${mins}:${secs}`;
+    }
+
+    function updateProgress() {
+      if (isTimerMode && totalSeconds > 0) {
+        const progressPercent = (remainingSeconds / totalSeconds) * 100;
+        progress.style.width = `${progressPercent}%`;
+      }
+    }
+
+    // 시작/일시정지 토글
+    startBtn.addEventListener('click', () => {
+      if (!isRunning) {
+        isRunning = true;
+        startBtn.textContent = "일시정지";
+        if (isTimerMode) {
+          if (remainingSeconds <= 0) remainingSeconds = totalSeconds;
+          timerInterval = setInterval(() => {
+            if (remainingSeconds > 0) {
+              remainingSeconds--;
+              updateDisplay(remainingSeconds);
+              updateProgress();
+            } else {
+              clearInterval(timerInterval);
+              isRunning = false;
+              startBtn.textContent = "시작";
+            }
+          }, 1000);
+        } else {
+          timerInterval = setInterval(() => {
+            stopwatchTime++;
+            updateDisplay(stopwatchTime);
+          }, 1000);
+        }
+      } else {
+        clearInterval(timerInterval);
+        isRunning = false;
+        startBtn.textContent = "시작";
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      isRunning = false;
+      startBtn.textContent = "시작";
+      if (isTimerMode) {
+        remainingSeconds = totalSeconds;
+        updateDisplay(remainingSeconds);
+        updateProgress();
+      } else {
+        stopwatchTime = 0;
+        updateDisplay(stopwatchTime);
+      }
+    });
+
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'flex';
+    });
+
+    closeSettings.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+    });
+
+    function updateTimerFromInputs() {
+      totalSeconds = (parseInt(setHours.value)||0)*3600 + (parseInt(setMinutes.value)||0)*60 + (parseInt(setSeconds.value)||0);
+      remainingSeconds = totalSeconds;
+      updateDisplay(remainingSeconds);
+      updateProgress();
+    }
+
+    setHours.addEventListener('change', updateTimerFromInputs);
+    setMinutes.addEventListener('change', updateTimerFromInputs);
+    setSeconds.addEventListener('change', updateTimerFromInputs);
+
+    timerMode.addEventListener('click', () => {
+      isTimerMode = true;
+      timerMode.classList.add('active');
+      stopwatchMode.classList.remove('active');
+      progressContainer.style.display = 'block';
+      remainingSeconds = totalSeconds;
+      updateDisplay(remainingSeconds);
+      updateProgress();
+    });
+
+    stopwatchMode.addEventListener('click', () => {
+      isTimerMode = false;
+      timerMode.classList.remove('active');
+      stopwatchMode.classList.add('active');
+      progressContainer.style.display = 'none';
+      stopwatchTime = 0;
+      updateDisplay(stopwatchTime);
+    });
+
+    themeToggle.addEventListener('click', () => {
+      isDarkMode = !isDarkMode;
+      if (isDarkMode) {
+        document.documentElement.style.setProperty('--bg-color', '#000');
+        document.documentElement.style.setProperty('--text-color', '#fff');
+      } else {
+        document.documentElement.style.setProperty('--bg-color', '#fff');
+        document.documentElement.style.setProperty('--text-color', '#000');
+      }
+    });
+
+    customBtn.addEventListener('click', () => {
+      customModal.style.display = 'flex';
+    });
+
+    applyCustom.addEventListener('click', () => {
+      document.documentElement.style.setProperty('--bg-color', bgColorPicker.value);
+      document.documentElement.style.setProperty('--text-color', textColorPicker.value);
+      customModal.style.display = 'none';
+    });
+
+    updateDisplay(0);
+  </script>
+</body>
+</html>
